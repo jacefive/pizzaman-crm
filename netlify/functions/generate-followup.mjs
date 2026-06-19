@@ -16,8 +16,8 @@ import { getStore } from '@netlify/blobs'
 
 const POSTHOG_HOST = 'https://us.i.posthog.com'
 
-// Real Anthropic pricing for Claude Haiku 4.5, USD per 1M tokens (verify before quoting publicly).
-const PRICE_PER_M = { input: 1.00, output: 5.00 }
+// Real Anthropic pricing for Claude Sonnet 4.6, USD per 1M tokens (verify before quoting publicly).
+const PRICE_PER_M = { input: 3.00, output: 15.00 }
 function computeCost(usage) {
   const inT = usage?.input_tokens || 0
   const outT = usage?.output_tokens || 0
@@ -61,7 +61,7 @@ export async function handler(event) {
 
     const t0 = Date.now()
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',  // cheap + fast; ~a fifth of a cent per call
+      model: 'claude-sonnet-4-6',  // stronger writing; ~half a cent per call at this length
       max_tokens: 300,
       system:
         "You are the follow-up writer inside PizzaManCRM, a deliberately ridiculous demo CRM where the " +
