@@ -328,11 +328,15 @@
         setAiLoading(true); setAiDraft(null); setAiMetrics(null); setAiError(null);
         try {
           const distinctId = window.posthog ? window.posthog.get_distinct_id() : null;
+          const firstContact = (company.contacts && company.contacts[0]) || null;
           const res = await fetch('/.netlify/functions/generate-followup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               companyName: company.company,
+              contactName: firstContact ? firstContact.name : 'there',
+              contactTitle: firstContact ? firstContact.title : '',
+              status: company.status,
               activityLog: (company.activityLog || []).map(l => l.entry).join(' | '),
               distinctId,
             }),
