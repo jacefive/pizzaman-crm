@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Server-side AI follow-up function for PizzaManCRM, traced with PostHog AI observability.",
   "dependencies": {
-    "@posthog/ai": "^7.4.0",
-    "@anthropic-ai/sdk": "^0.40.0",
-    "posthog-node": "^4.10.0",
-    "@netlify/blobs": "^8.1.0"
+    "@posthog/ai": "^8.2.1",
+    "@anthropic-ai/sdk": "^0.78.0",
+    "posthog-node": "^5.0.0",
+    "@netlify/blobs": "^10.7.9"
   }
 }
