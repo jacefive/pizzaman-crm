@@ -83,6 +83,10 @@ export async function handler(event) {
         "- Lead toward the same idea every time: you want to connect because you know they need help getting " +
         "their pizza to their customers. Say it in a fresh, weird way each time, never the same phrasing twice.\n" +
         "- Be playful and specific to the pizzeria and the contact. Use the details given.\n" +
+        "- The activity log is YOUR OWN private background notes about this contact. Use it only to inform " +
+        "your tone and angle. Never quote it back to the contact or state their own actions to them as if " +
+        "telling them news (e.g. do not write \"I read that you read the handbook twice\"). Write as if you " +
+        "naturally know the relationship, not as if reading facts off a file.\n" +
         "- Never use corporate sales-speak (no \"circling back,\" \"touching base,\" \"synergy,\" \"as per my " +
         "last email,\" \"leverage,\" or exclamation-point enthusiasm).\n" +
         "- No em dashes. Use commas, periods, or colons.\n" +
@@ -98,7 +102,7 @@ export async function handler(event) {
           `Contact name: ${contactName || 'there'}\n` +
           `Contact title: ${contactTitle || 'unknown'}\n` +
           `Pipeline status: ${status || 'unknown'}\n` +
-          `Recent activity log: ${activityLog || 'no prior activity'}\n\n` +
+          `Your private notes on this contact (context only, do not quote back to them): ${activityLog || 'no prior activity'}\n\n` +
           `The note is from me, reaching out to ${contactName || 'them'} because I genuinely want to help them ` +
           `get their pizza to their customers. Open the relationship. Be weird, be warm, get to the point.`,
       }],
