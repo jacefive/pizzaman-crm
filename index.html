@@ -165,6 +165,7 @@
       const [aiDraft, setAiDraft]     = useState(null);
       const [aiMetrics, setAiMetrics] = useState(null);
       const [aiError, setAiError]     = useState(null);
+      const [showAiInfo, setShowAiInfo] = useState(false);
       const fileInputRef = React.useRef(null);
 
       useEffect(() => {
@@ -346,6 +347,17 @@
           const data = await res.json();
           setAiDraft(data.draft);
           setAiMetrics(data.metrics);
+          // Save this generation into the company's record so it persists and shows in the AI Drafts tab.
+          const entry = {
+            id: 'ai' + Date.now(),
+            text: data.draft,
+            addressedTo: firstContact ? firstContact.name : 'there',
+            date: new Date().toISOString(),
+            metrics: data.metrics,
+          };
+          persist(companies.map(c => c.id === company.id
+            ? { ...c, aiFollowups: [entry, ...(c.aiFollowups || [])] }
+            : c));
           track('ai_followup_generated', { company: company.company });
         } catch (e) {
           setAiError("Couldn't reach the AI. Check back in a moment.");
@@ -697,6 +709,12 @@
                     style={{ width:"100%", background: aiLoading ? "#fbbf24" : "#f59e0b", color:"#7c2d12", border:"none", padding:"9px 12px", borderRadius:8, fontSize:13, fontWeight:600, cursor: aiLoading ? "default" : "pointer" }}>
                     {aiLoading ? "🍕 Thinking…" : "🍕 Generate follow-up with AI (and see what happens)"}
                   </button>
+                  <div style={{ textAlign:"center", marginTop:6 }}>
+                    <button onClick={() => setShowAiInfo(true)}
+                      style={{ background:"none", border:"none", color:"#94a3b8", fontSize:11, cursor:"pointer", textDecoration:"underline" }}>
+                      ⓘ What's this?
+                    </button>
+                  </div>
 
                   {aiError && (
                     <div style={{ marginTop:10, fontSize:12, color:"#b45309", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, padding:"10px 12px" }}>{aiError}</div>
@@ -727,7 +745,7 @@
 
                 {/* Tabs */}
                 <div style={{ display:"flex", borderBottom:"1px solid #f1f5f9", flexShrink:0 }}>
-                  {[["log", `Activity (${selected.activityLog.length})`], ["contacts", `Contacts (${selected.contacts.length})`]].map(([id, label]) => (
+                  {[["log", `Activity (${selected.activityLog.length})`], ["contacts", `Contacts (${selected.contacts.length})`], ["ai", `AI Drafts (${(selected.aiFollowups || []).length})`]].map(([id, label]) => (
                     <button key={id} onClick={() => setTab(id)}
                       style={{ flex:1, padding:"9px 8px", fontSize:12, fontWeight:500, border:"none", cursor:"pointer",
                         background: activeTab === id ? "#eff6ff" : "white",
@@ -847,10 +865,57 @@
                       )}
                     </div>
                   )}
+
+                  {activeTab === "ai" && (
+                    <div>
+                      {(!selected.aiFollowups || selected.aiFollowups.length === 0) ? (
+                        <div style={{ fontSize:12, color:"#94a3b8", textAlign:"center", padding:"20px 0", lineHeight:1.5 }}>
+                          No AI drafts yet.<br />Hit "Generate follow-up with AI" above and they'll be saved here.
+                        </div>
+                      ) : (
+                        selected.aiFollowups.map(d => (
+                          <div key={d.id} style={{ marginBottom:10, padding:"12px 14px", background:"#fff7ed", borderRadius:8, border:"1px solid #fed7aa" }}>
+                            <div style={{ fontSize:13, color:"#1e293b", lineHeight:1.5, whiteSpace:"pre-wrap" }}>{d.text}</div>
+                            <div style={{ fontSize:10, color:"#b45309", marginTop:8, display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6 }}>
+                              <span>To {d.addressedTo} · {new Date(d.date).toLocaleDateString("en-US", { month:"short", day:"numeric" })} {new Date(d.date).toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit" })}</span>
+                              {d.metrics && <span style={{ fontFamily:"ui-monospace, Menlo, monospace" }}>${(d.metrics.costUsd || 0).toFixed(5)} · {(d.metrics.latencyMs/1000).toFixed(2)}s</span>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
+
+          {/* AI INFO OVERLAY */}
+          {showAiInfo && (
+            <div onClick={() => setShowAiInfo(false)}
+              style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:60, padding:20 }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{ background:"white", borderRadius:12, padding:24, width:"100%", maxWidth:440, boxShadow:"0 20px 60px rgba(0,0,0,0.25)", maxHeight:"85vh", overflowY:"auto" }}>
+                <div style={{ fontWeight:700, fontSize:16, marginBottom:12, color:"#1e293b" }}>🍕 About the AI follow-up button</div>
+                <div style={{ fontSize:13, color:"#334155", lineHeight:1.6 }}>
+                  <p style={{ marginBottom:10 }}>
+                    Click <strong>Generate follow-up with AI</strong> and Claude writes a short, PostHog-voiced follow-up note to this company's first contact, using the pipeline status and your activity notes as background.
+                  </p>
+                  <p style={{ marginBottom:10 }}>
+                    Every call runs through <strong>PostHog's AI observability</strong>. The dark panel shows the real tokens, latency, and cost of the call you just made, the same data PostHog captures as a trace.
+                  </p>
+                  <p style={{ marginBottom:10 }}>
+                    Each note is saved to the <strong>AI Drafts</strong> tab for this company, so you can compare them. The AI never reads that tab, it only sees your activity notes and contact, so it won't recycle its own old drafts.
+                  </p>
+                  <p style={{ color:"#64748b", fontSize:12 }}>
+                    This is a demo. The pizzerias and hedgehogs are fictional. Built by Jason as a PostHog application piece.
+                  </p>
+                </div>
+                <button onClick={() => setShowAiInfo(false)}
+                  style={{ marginTop:16, width:"100%", background:"#f59e0b", color:"#7c2d12", border:"none", padding:"9px", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer" }}>Got it</button>
+              </div>
+            </div>
+          )}
 
           {/* ADD COMPANY MODAL */}
           {showAddCo && (
