@@ -141,9 +141,8 @@ export async function handler(event) {
       }),
     }
   } catch (err) {
-    // TEMPORARY DEBUG (remove once fixed): print the real failure reason to the function log.
-    console.error('generate-followup ERROR -> status:', err?.status, '| name:', err?.name, '| message:', err?.message || err)
-    console.error('generate-followup KEYS -> ANTHROPIC present:', !!process.env.ANTHROPIC_API_KEY, '| POSTHOG present:', !!process.env.POSTHOG_API_KEY)
+    // Minimal error log for troubleshooting; no secrets, no key-presence dumps.
+    console.error('generate-followup failed:', err?.message || err)
     try { if (phClient) await phClient.shutdown() } catch {}
     return { statusCode: 500, body: JSON.stringify({ error: 'The AI got confused. Try again.' }) }
   }
