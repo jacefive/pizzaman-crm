@@ -1,0 +1,8 @@
+# Netlify configuration for PizzaManCRM
+# Publishes the static site from the repo root and runs the AI function
+# from netlify/functions. Netlify installs the function's dependencies
+# automatically from package.json during deploy.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
