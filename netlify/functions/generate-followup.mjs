@@ -38,21 +38,28 @@ export async function handler(event) {
   try {
     const { companyName, contactName, contactTitle, status, activityLog, distinctId } = JSON.parse(event.body || '{}')
 
-    // ---- rate limiting + daily kill switch (Netlify Blobs = shared store across instances) ----
-    const ip = event.headers['x-nf-client-connection-ip'] || event.headers['client-ip'] || 'unknown'
-    const today = new Date().toISOString().slice(0, 10)   // YYYY-MM-DD
-    const hour = new Date().toISOString().slice(0, 13)     // YYYY-MM-DDTHH
-    const store = getStore('ai-followup-limits')
-    const dayKey = `day:${today}`
-    const ipKey = `ip:${ip}:${hour}`
-    const dayCount = parseInt((await store.get(dayKey)) || '0', 10)
-    const ipCount = parseInt((await store.get(ipKey)) || '0', 10)
+    // ---- rate limiting + daily kill switch (best-effort; skipped if Netlify Blobs is unavailable) ----
+    // The real cost backstop is the Anthropic workspace spend cap; this counter is just a convenience layer.
+    let store = null, dayKey, ipKey, dayCount = 0, ipCount = 0
+    try {
+      const ip = event.headers['x-nf-client-connection-ip'] || event.headers['client-ip'] || 'unknown'
+      const today = new Date().toISOString().slice(0, 10)   // YYYY-MM-DD
+      const hour = new Date().toISOString().slice(0, 13)     // YYYY-MM-DDTHH
+      store = getStore('ai-followup-limits')
+      dayKey = `day:${today}`
+      ipKey = `ip:${ip}:${hour}`
+      dayCount = parseInt((await store.get(dayKey)) || '0', 10)
+      ipCount = parseInt((await store.get(ipKey)) || '0', 10)
 
-    if (dayCount >= GLOBAL_PER_DAY) {
-      return { statusCode: 429, body: JSON.stringify({ error: "Demo's had enough pizza for today — come back tomorrow." }) }
-    }
-    if (ipCount >= PER_IP_PER_HOUR) {
-      return { statusCode: 429, body: JSON.stringify({ error: 'Slow down a sec — try again shortly.' }) }
+      if (dayCount >= GLOBAL_PER_DAY) {
+        return { statusCode: 429, body: JSON.stringify({ error: "Demo's had enough pizza for today — come back tomorrow." }) }
+      }
+      if (ipCount >= PER_IP_PER_HOUR) {
+        return { statusCode: 429, body: JSON.stringify({ error: 'Slow down a sec — try again shortly.' }) }
+      }
+    } catch (limitErr) {
+      console.warn('Rate limiting unavailable, proceeding without it:', limitErr?.name)
+      store = null
     }
 
     // ---- the traced LLM call ----
@@ -106,9 +113,13 @@ export async function handler(event) {
     const usage = response.usage || {}
     const costUsd = computeCost(usage)
 
-    // best-effort counter increment
-    await store.set(dayKey, String(dayCount + 1))
-    await store.set(ipKey, String(ipCount + 1))
+    // best-effort counter increment (skipped if Blobs unavailable)
+    if (store) {
+      try {
+        await store.set(dayKey, String(dayCount + 1))
+        await store.set(ipKey, String(ipCount + 1))
+      } catch {}
+    }
 
     await phClient.shutdown()  // REQUIRED in serverless so the event flushes before the function exits
 
